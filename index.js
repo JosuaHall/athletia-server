@@ -4,12 +4,18 @@ const users = require("./routes/api/users");
 const auth = require("./routes/api/auth");
 const organizations = require("./routes/api/organizations");
 const config = require("config");
+const cors = require("cors");
 
 const app = express();
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use("/public", express.static("public"));
+app.use(
+  cors({
+    origin: ["https://localhost:3000", "https://athletia.onrender.com"],
+  })
+);
 
 const db = config.get("mongoURI");
 
