@@ -4,4 +4,4 @@
 /.nyc
 /.env
 /.DS_Store
-/config
+/default.json
