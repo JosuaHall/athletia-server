@@ -44,13 +44,14 @@ const upload = multer({
 // @desc    Load Teams
 // @access  Private
 router.post("/create/:id", upload.single("logo"), (req, res) => {
-  const { owner, name, admin_email } = req.body;
+  const { owner, name } = req.body;
   const logo = req.file.filename;
-  if (!name || !admin_email) {
+
+  if (!name || !logo) {
     return res.status(400).json({ msg: "Please enter all fields" });
   }
   //check for existing user
-  Organization.findOne({ name }).then((organization) => {
+  Organization.findOne({ name: name }).then((organization) => {
     if (organization)
       return res.status(400).json({ msg: "Organization already exists" });
 
@@ -260,7 +261,7 @@ router.get("/event/list/:teamid", (req, res) => {
 
 router.get("/get/sports", (req, res) => {
   Sport.find({})
-    .sort({ name: 1 })
+    .sort({ sport: 1 })
     .then((sports) => {
       res.status(200).json(sports);
     })
@@ -334,7 +335,14 @@ router.put(
     User.findByIdAndUpdate({ _id: userid }, { profileImg: logo }, { new: true })
       .select("-password")
       .then((user) => {
-        res.status(200).json(user);
+        res.status(200).json({
+          _id: user.id,
+          name: user.name,
+          email: user.email,
+          profileImg: user.profileImg,
+          teams_followed: user.teams_followed,
+          organizations_followed: user.organizations_followed,
+        });
       })
       .catch((err) => {
         res.status(400).json(err);

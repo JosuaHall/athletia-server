@@ -52,7 +52,7 @@ router.post("/", (req, res) => {
                   _id: user.id,
                   name: user.name,
                   email: user.email,
-                  profielImg: user.profielImg,
+                  profileImg: user.profileImg,
                   teams_followed: user.teams_followed,
                   organizations_followed: user.organizations_followed,
                 },
@@ -74,6 +74,8 @@ router.put("/follow/team/:userid/:orgid/:teamid", (req, res) => {
     {
       $addToSet: {
         teams_followed: teamid,
+      },
+      $addToSet: {
         organizations_followed: orgid,
       },
     },
@@ -122,7 +124,7 @@ router.put("/unfollow/team/:userid/:orgid/:teamid", (req, res) => {
 router.get("/get/filtered/users", (req, res) => {
   let search_string = req.query.name;
 
-  User.find({ name: new RegExp(search_string, "i") })
+  User.find({ name: new RegExp(search_string, search_string) })
     .select("-password")
     .then((user) => {
       res.status(200).json(user);

@@ -11,11 +11,18 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use("/public", express.static("public"));
-app.use(
-  cors({
+
+const corsOptions = {
+  origin: "https://athletia.onrender.com",
+  credentials: true, //access-control-allow-credentials:true
+  optionSuccessStatus: 200,
+};
+app.use(cors(corsOptions));
+
+/*
     origin: ["https://localhost:3000", "https://athletia.onrender.com"],
-  })
-);
+
+);*/
 
 const db = config.get("mongoURI");
 
