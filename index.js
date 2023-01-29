@@ -13,7 +13,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use("/public", express.static("public"));
 
 const corsOptions = {
-  origin: "http://localhost:3000",
+  origin: "https://athletia.onrender.com",
   credentials: true, //access-control-allow-credentials:true
   optionSuccessStatus: 200,
 };
