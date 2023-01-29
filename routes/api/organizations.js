@@ -5,6 +5,8 @@ const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
 const auth = require("../../middleware/auth");
+//const cloudinary = require("../../cloudinary/config");
+const cloudinary = require("../../cloudinary/config");
 
 const Organization = require("../../models/Organization");
 const User = require("../../models/User");
@@ -13,7 +15,7 @@ const TeamAdminRequest = require("../../models/TeamAdminRequest");
 const { model } = require("mongoose");
 const { events } = require("../../models/Organization");
 
-//define storage for the images
+/*define storage for the images on local
 const DIR = "./public/";
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -23,7 +25,9 @@ const storage = multer.diskStorage({
     cb(null, `${Date.now()}-${file.originalname}`);
   },
 });
-
+*/
+//for deployment
+const storage = multer.memoryStorage();
 const upload = multer({
   storage: storage,
   fileFilter: (req, file, cb) => {
@@ -38,6 +42,7 @@ const upload = multer({
       return cb(new Error("Only .png, .jpg and .jpeg format allowed!"));
     }
   },
+  limits: { fieldSize: 25 * 1024 * 1024 },
 });
 
 // @route   Post api/teams
@@ -45,30 +50,42 @@ const upload = multer({
 // @access  Private
 router.post("/create/:id", upload.single("logo"), (req, res) => {
   const { owner, name } = req.body;
-  const logo = req.file.filename;
+  const logo = req.file.buffer;
 
   if (!name || !logo) {
     return res.status(400).json({ msg: "Please enter all fields" });
   }
+
   //check for existing user
   Organization.findOne({ name: name }).then((organization) => {
     if (organization)
       return res.status(400).json({ msg: "Organization already exists" });
 
-    const newOrganization = new Organization({
-      owner,
-      logo,
-      name,
-    });
+    cloudinary.v2.uploader
+      .upload_stream(
+        { resource_type: "image", folder: "organizations" },
+        (error, result) => {
+          if (error) {
+            return res.status(400).send(error);
+          }
 
-    newOrganization
-      .save()
-      .then((organization) => {
-        res.status(200).json(organization);
-      })
-      .catch((err) => {
-        res.status(400).json(err);
-      });
+          const newOrganization = new Organization({
+            owner,
+            logo: result.url,
+            name,
+          });
+
+          newOrganization
+            .save()
+            .then((organization) => {
+              res.status(200).json(organization);
+            })
+            .catch((err) => {
+              res.status(400).json(err);
+            });
+        }
+      )
+      .end(logo);
   });
 });
 
@@ -331,22 +348,39 @@ router.put(
   upload.single("profileImg"),
   (req, res) => {
     const { userid } = req.body;
-    const logo = req.file.filename;
-    User.findByIdAndUpdate({ _id: userid }, { profileImg: logo }, { new: true })
-      .select("-password")
-      .then((user) => {
-        res.status(200).json({
-          _id: user.id,
-          name: user.name,
-          email: user.email,
-          profileImg: user.profileImg,
-          teams_followed: user.teams_followed,
-          organizations_followed: user.organizations_followed,
-        });
-      })
-      .catch((err) => {
-        res.status(400).json(err);
-      });
+    //const logo = req.file.filename;
+    const logo = req.file.buffer;
+
+    cloudinary.v2.uploader
+      .upload_stream(
+        { resource_type: "image", folder: "users" },
+        (error, result) => {
+          if (error) {
+            return res.status(400).send(error);
+          }
+
+          User.findByIdAndUpdate(
+            { _id: userid },
+            { profileImg: result.url },
+            { new: true }
+          )
+            .select("-password")
+            .then((user) => {
+              res.status(200).json({
+                _id: user.id,
+                name: user.name,
+                email: user.email,
+                profileImg: user.profileImg,
+                teams_followed: user.teams_followed,
+                organizations_followed: user.organizations_followed,
+              });
+            })
+            .catch((err) => {
+              res.status(400).json(err);
+            });
+        }
+      )
+      .end(logo);
   }
 );
 
