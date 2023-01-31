@@ -5,6 +5,7 @@ const auth = require("./routes/api/auth");
 const organizations = require("./routes/api/organizations");
 const config = require("config");
 const cors = require("cors");
+const path = require("path");
 
 const app = express();
 
