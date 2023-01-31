@@ -33,6 +33,9 @@ mongoose
 
 // Use Routes
 //app.use("/public", express.static("public"));
+app.get("*", (req, res) => {
+  res.sendFile(path.join(__dirname, "build", "index.html"));
+});
 app.use("/api/users", users);
 app.use("/api/auth", auth);
 app.use("/api/organizations", organizations);
