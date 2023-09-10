@@ -47,6 +47,15 @@ const UserSchema = new Schema({
     default: "",
     required: false,
   },
+  isAdminAccount: {
+    type: Number,
+    required: true,
+  },
+  isHeadAdminOfAhletia: {
+    type: Boolean,
+    required: true,
+    default: false,
+  },
   register_date: {
     type: Date,
     default: Date.now,

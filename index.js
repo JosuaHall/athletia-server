@@ -14,14 +14,14 @@ app.use(express.urlencoded({ extended: true }));
 app.use("/public", express.static("public"));
 
 const corsOptions = {
-  origin: "https://athletia.netlify.app",
+  origin: "http://localhost:3000",
   credentials: true, //access-control-allow-credentials:true
   optionSuccessStatus: 200,
 };
 app.use(cors(corsOptions));
 
 /*
-    origin: ["http://localhost:3000", "https://athletia.onrender.com"],
+    origin: ["http://localhost:3000", "https://athletia.onrender.com, https://athletia.netlify.app"],
 
 );*/
 

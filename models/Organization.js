@@ -13,6 +13,17 @@ const OrganizationSchema = new Schema({
   },
   owner: {
     type: mongoose.Schema.Types.ObjectId,
+    required: false,
+    ref: "User",
+  },
+  status: {
+    type: Number,
+    required: true,
+    default: 0,
+  },
+  created_by: {
+    type: mongoose.Schema.Types.ObjectId,
+    required: false,
     ref: "User",
   },
   register_date: {

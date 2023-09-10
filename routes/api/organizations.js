@@ -12,6 +12,8 @@ const Organization = require("../../models/Organization");
 const User = require("../../models/User");
 const Sport = require("../../models/Sport");
 const TeamAdminRequest = require("../../models/TeamAdminRequest");
+const OrganizationAdminRequest = require("../../models/OrganizationAdminRequest");
+const ChangeOrganizationAdminRequest = require("../../models/ChangeOrganizationAdminRequest");
 const { model } = require("mongoose");
 const { events } = require("../../models/Organization");
 
@@ -172,7 +174,7 @@ router.get("/organization/:organizationid", (req, res) => {
 });
 
 router.get("/get/all", (req, res) => {
-  Organization.find({})
+  Organization.find({ status: 1 })
     .populate({
       path: "teams.events.people_attending",
       model: User,
@@ -180,6 +182,75 @@ router.get("/get/all", (req, res) => {
     })
     .select("-password")
     .sort({ name: 1 })
+    .then((list) => {
+      res.status(200).json(list);
+    })
+    .catch((err) => {
+      res.status(400).json(err);
+    });
+});
+
+router.get("/get/all/requested", (req, res) => {
+  Organization.find({ status: 0 })
+    .populate({
+      path: "created_by",
+      model: User,
+      select: "-password",
+    })
+    .populate({
+      path: "owner",
+      model: User,
+      select: "-password",
+    })
+    .select("-password")
+    .sort({ register_date: 1 })
+    .then((list) => {
+      res.status(200).json(list);
+    })
+    .catch((err) => {
+      res.status(400).json(err);
+    });
+});
+
+router.get("/get/all/owner/requests", (req, res) => {
+  OrganizationAdminRequest.find({})
+    .populate({
+      path: "request_by_user",
+      model: User,
+      select: "-password",
+    })
+    .populate({
+      path: "organization",
+      model: Organization,
+    })
+    .select("-password")
+    .sort({ register_date: 1 })
+    .then((list) => {
+      res.status(200).json(list);
+    })
+    .catch((err) => {
+      res.status(400).json(err);
+    });
+});
+
+router.get("/get/all/head/admin/change/requests", (req, res) => {
+  ChangeOrganizationAdminRequest.find({})
+    .populate({
+      path: "requesting_admin",
+      model: User,
+      select: "-password",
+    })
+    .populate({
+      path: "organization",
+      model: Organization,
+      populate: {
+        path: "owner",
+        model: User,
+        select: "-password",
+      },
+    })
+    .select("-password")
+    .sort({ register_date: 1 })
     .then((list) => {
       res.status(200).json(list);
     })
@@ -467,6 +538,91 @@ router.get("/load/team/admin/requests/:user_recipient", (req, res) => {
     });
 });
 
+router.put("/approve/ownership/:reqid/:orgid/:userid", (req, res) => {
+  const reqid = req.params.reqid;
+  const orgid = req.params.orgid;
+  const userid = req.params.userid;
+
+  Organization.findByIdAndUpdate(
+    { _id: orgid },
+    {
+      owner: userid,
+    }
+  )
+    .then((organization) => {
+      if (!organization) {
+        return res.status(404).json({ message: "Organization not found" });
+      }
+      // Delete the organization admin request
+      return OrganizationAdminRequest.findByIdAndDelete({ _id: reqid });
+    })
+    .then(() => {
+      res
+        .status(200)
+        .json({ message: "Ownership updated and request deleted" });
+    })
+    .catch((err) => {
+      res.status(400).json(err);
+    });
+});
+
+router.delete("/delete/ownership/request/:reqid", (req, res) => {
+  const reqid = req.params.reqid;
+  OrganizationAdminRequest.deleteOne({
+    _id: reqid,
+  })
+    .then((teamAdminRequest) => {
+      res.status(200).json(teamAdminRequest);
+    })
+    .catch((err) => {
+      res.status(400).json(err);
+    });
+});
+
+router.put(
+  "/approve/admin/change/request/:reqid/:orgid/:userid",
+  (req, res) => {
+    const reqid = req.params.reqid;
+    const orgid = req.params.orgid;
+    const userid = req.params.userid;
+
+    Organization.findByIdAndUpdate(
+      { _id: orgid },
+      {
+        owner: userid,
+      }
+    )
+      .then((organization) => {
+        if (!organization) {
+          return res.status(404).json({ message: "Organization not found" });
+        }
+        // Delete the organization admin request
+        return ChangeOrganizationAdminRequest.findByIdAndDelete({ _id: reqid });
+      })
+      .then(() => {
+        res
+          .status(200)
+          .json({ message: "Ownership updated and request deleted" });
+      })
+      .catch((err) => {
+        res.status(400).json(err);
+      });
+  }
+);
+
+router.delete("/delete/admin/change/request/:reqid", (req, res) => {
+  const reqid = req.params.reqid;
+  ChangeOrganizationAdminRequest.deleteOne({
+    _id: reqid,
+  })
+    .then((organizationChangeAdminRequest) => {
+      res.status(200).json(organizationChangeAdminRequest);
+    })
+    .catch((err) => {
+      res.status(400).json(err);
+    });
+});
+
 router.put("/accept/request/:id", (req, res) => {
   const id = req.params.id;
   TeamAdminRequest.findByIdAndUpdate(
@@ -496,6 +652,100 @@ router.delete("/delete/team/admin/request/entry/:id", (req, res) => {
   })
     .then((teamAdminRequest) => {
       res.status(200).json(teamAdminRequest);
+    })
+    .catch((err) => {
+      res.status(400).json(err);
+    });
+});
+
+router.delete("/delete/organization/:orgid", async (req, res) => {
+  const orgid = req.params.orgid;
+  const organization = await Organization.findById(orgid);
+
+  if (!organization) {
+    return res.status(404).json({ msg: "Organization not found" });
+  }
+
+  const public_id = organization.logo.match(/\/([^\/]+)$/)[1].split(".")[0];
+
+  cloudinary.v2.uploader.destroy(
+    `organizations/${public_id}`,
+    { resource_type: "image" },
+    function (error, result) {
+      if (error) {
+        return res
+          .status(500)
+          .json({ msg: "Failed to delete image on Cloudinary" });
+      }
+      if (result.result === "not found") {
+        return res.status(404).json({ msg: "Image not found on Cloudinary" });
+      }
+      // Image was successfully deleted, delete organization document
+      organization.remove(function (err) {
+        if (err) {
+          return res
+            .status(500)
+            .json({ msg: "Failed to delete organization document" });
+        }
+        res.status(200).json({ msg: "Organization deleted" });
+      });
+    }
+  );
+});
+
+/*
+router.delete("/delete/organization/:orgid", async (req, res) => {
+  const orgid = req.params.orgid;
+
+  try {
+    const organization = await Organization.findById(orgid);
+
+    if (!organization) {
+      return res.status(404).json({ msg: "Organization not found" });
+    }
+
+    const logoUrl = organization.logo;
+    const publicId = logoUrl.substring(
+      logoUrl.lastIndexOf("/") + 1,
+      logoUrl.lastIndexOf(".")
+    );
+
+    console.log("logoUrl: ", logoUrl);
+    console.log("publicId: ", publicId);
+    await cloudinary.v2.uploader.destroy(publicId, (error, result) => {
+      if (error) {
+        console.error(error);
+        return res
+          .status(500)
+          .json({ msg: "Failed to delete image on Cloudinary" });
+      }
+      console.log(result);
+    });
+
+    await Organization.deleteOne({ _id: orgid });
+
+    res.status(200).json({ msg: "Organization deleted" });
+  } catch (err) {
+    console.error(err);
+    res.status(400).json({ msg: "Failed to delete organization" });
+  }
+});*/
+
+router.put("/approve/organization/:orgid", (req, res) => {
+  const orgid = req.params.orgid;
+  Organization.updateOne(
+    {
+      _id: orgid,
+    },
+    {
+      status: 1,
+    }
+  )
+    .then((result) => {
+      if (result.nModified === 0) {
+        return res.status(404).json({ message: "Organization not found." });
+      }
+      res.status(200).json(result);
     })
     .catch((err) => {
       res.status(400).json(err);

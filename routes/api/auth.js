@@ -52,6 +52,7 @@ router.post("/", (req, res) => {
                   profileImg: user.profileImg,
                   teams_followed: user.teams_followed,
                   organizations_followed: user.organizations_followed,
+                  isHeadAdminOfAhletia: user.isHeadAdminOfAhletia,
                 },
               });
             }
