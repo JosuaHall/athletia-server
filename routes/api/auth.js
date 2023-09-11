@@ -9,6 +9,10 @@ const auth = require("../../middleware/auth");
 const User = require("../../models/User");
 const Organization = require("../../models/Organization");
 
+const dotenv = require("dotenv");
+
+dotenv.config(); // Load environment variables from .env file
+
 // @route   Post api/auth
 // @desc    Auth user
 // @access  Public
@@ -37,7 +41,7 @@ router.post("/", (req, res) => {
 
           jwt.sign(
             { id: user.id },
-            config.get("jwtSecret"),
+            process.env.jwtSecret,
             {
               expiresIn: 7200,
             },

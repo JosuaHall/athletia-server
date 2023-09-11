@@ -6,6 +6,7 @@ const organizations = require("./routes/api/organizations");
 const config = require("config");
 const cors = require("cors");
 const path = require("path");
+require("dotenv").config();
 
 const app = express();
 
@@ -25,7 +26,7 @@ app.use(cors(corsOptions));
 
 );*/
 
-const db = config.get("mongoURI");
+const db = process.env.mongoURI;
 
 mongoose
   .connect(db, { useNewUrlParser: true, useUnifiedTopology: true })

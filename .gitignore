@@ -2,6 +2,8 @@
 /build
 /npm-debug.log
 /.nyc
-/.env
+.env
 /.DS_Store
 /default.json
+config/default.json
+
